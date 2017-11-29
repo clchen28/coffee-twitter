@@ -19,6 +19,7 @@ def center_bounding_box(bounding_box):
         point4 = bounding_box.coordinates[0][3]
         lng = (point1[0] + point2[0] + point3[0] + point4[0]) / 4.0
         lat = (point1[1] + point2[1] + point3[1] + point4[1]) / 4.0
+        return [lat, lng]
     # Need just the point if bounding box is a Point
     # TODO: See if there is any situation where this is the case
     """
@@ -26,12 +27,13 @@ def center_bounding_box(bounding_box):
         lng = bounding_box.coordinates[0][0]
         lat = bounding_box.coordinates[0][1]
     """
-    return [lat, lng]
+    return None
 
 class MyStreamListener(tweepy.StreamListener):
     def __init__(self):
         super().__init__()
-        self.producer = KafkaProducer(bootstrap_servers='localhost:9092')
+        self.producer = KafkaProducer(bootstrap_servers='localhost:9092',
+            value_serializer=lambda v: v.encode('utf-8'))
     def on_status(self, status):
         lng = None
         lat = None
@@ -48,8 +50,9 @@ class MyStreamListener(tweepy.StreamListener):
                 lat, lng = location["lat"], location["lng"]
         if lat and lng:
             date = status.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            print(date + "," + str(lat) + "," + str(lng))
-            self.producer.send(date)
+            value = date + "," + str(lat) + "," + str(lng)
+            print(value)
+            self.producer.send(topic="coffee-topic", value=value)
         
 
 if __name__ == "__main__":
