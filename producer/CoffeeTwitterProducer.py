@@ -50,7 +50,7 @@ class MyStreamListener(tweepy.StreamListener):
                 lat, lng = location["lat"], location["lng"]
         if lat and lng:
             date = status.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            value = date + "," + str(lat) + "," + str(lng)
+            value = status.id_str + "," + date + "," + str(lat) + "," + str(lng)
             print(value)
             self.producer.send(topic="coffee-topic", value=value)
         

@@ -1,9 +1,18 @@
 import sys
+import json
 from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 from pyspark.sql.context import SQLContext
+
+def raw_to_json(raw):
+    data_list = raw.split(',')
+    data = {"id": data_list[0],
+            "date": data_list[1],
+            "lat": data_list[2],
+            "lng": data_list[3]}
+    return json.dumps(data)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -31,8 +40,10 @@ if __name__ == '__main__':
                                   {topic: 1})
     
     # Represented as a tuple of (key, value)
-    lines = kvs.map(lambda x: x[1])
+    lines = kvs.map(lambda x: raw_to_json(x[1]))
     lines.pprint()
+
+    # TODO: Store in redis
 
     """
     counts = lines.flatMap(lambda line: line.split(" ")) \
