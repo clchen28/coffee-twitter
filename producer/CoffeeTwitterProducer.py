@@ -4,7 +4,6 @@ import googlemaps
 from dotenv import load_dotenv, find_dotenv
 from kafka import KafkaProducer
 
-# https://gist.github.com/dev-techmoe/ef676cdd03ac47ac503e856282077bf2
 # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
 # Structure of Status object
 
@@ -33,6 +32,7 @@ class MyStreamListener(tweepy.StreamListener):
     def __init__(self):
         super().__init__()
         self.producer = KafkaProducer(bootstrap_servers='localhost:9092',
+            key_serializer=lambda v: v.encode('utf-8'),
             value_serializer=lambda v: v.encode('utf-8'))
     def on_status(self, status):
         lng = None
@@ -52,7 +52,7 @@ class MyStreamListener(tweepy.StreamListener):
             date = status.created_at.strftime("%Y-%m-%d %H:%M:%S")
             value = status.id_str + "," + date + "," + str(lat) + "," + str(lng)
             print(value)
-            self.producer.send(topic="coffee-topic", value=value)
+            self.producer.send(topic="coffee-topic", key=status.id_str, value=value)
         
 
 if __name__ == "__main__":

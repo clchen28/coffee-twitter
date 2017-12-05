@@ -1,11 +1,13 @@
 import sys
 import json
+import redis
 from pyspark import SparkContext
 from pyspark import SparkConf
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 from pyspark.sql.context import SQLContext
 
+"""
 def raw_to_json(raw):
     data_list = raw.split(',')
     data = {"id": data_list[0],
@@ -13,6 +15,18 @@ def raw_to_json(raw):
             "lat": data_list[2],
             "lng": data_list[3]}
     return json.dumps(data)
+"""
+
+def saveToRedis(iters):
+    r = redis.StrictRedis(host="localhost", port=6379)
+    for record in iters:
+        data = record[1].split(',')
+        key = record[0]
+        value = str(data[2]) + ',' + str(data[3])
+        r.set(key, value)
+        print("HERE!!!")
+        print(key)
+        print(value)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -26,10 +40,9 @@ if __name__ == '__main__':
     # batches
     ssc = StreamingContext(sc, 1)
 
-    zkQuorum= sys.argv[1]
+    zkQuorum = sys.argv[1]
     topic = sys.argv[2]
 
-    # TODO: Not sure what groupId does ("spark-streaming-consumer")
     # createStream returns a DStream object
     # DStream is a continuous sequence of RDDs
     # RDDs are the basic abstraction in Spark - these are datasets that can
@@ -40,17 +53,13 @@ if __name__ == '__main__':
                                   {topic: 1})
     
     # Represented as a tuple of (key, value)
-    lines = kvs.map(lambda x: raw_to_json(x[1]))
-    lines.pprint()
+    # lines = kvs.map(lambda x: x[1])
+    # lines.pprint()
+    # lines.foreachRDD(lambda rdd: rdd.foreachPartition(saveToRedis))
+    kvs.foreachRDD(lambda rdd: rdd.foreachPartition(saveToRedis))
 
-    # TODO: Store in redis
-
-    """
-    counts = lines.flatMap(lambda line: line.split(" ")) \
-                  .map(lambda word: (word, 1)) \
-                  .reduceByKey(lambda a, b: a+b)
-    counts.pprint()
-    """
+    # TODO: Store in redis - use tweet ID as the key
+    # TODO: http://spark.apache.org/docs/latest/streaming-programming-guide.html#output-operations-on-dstreams
 
     ssc.start()
     ssc.awaitTermination()
