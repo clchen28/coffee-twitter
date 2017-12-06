@@ -24,6 +24,8 @@ def saveToRedis(iters):
         key = record[0]
         value = str(data[2]) + ',' + str(data[3])
         r.set(key, value)
+        r.lpush("last10", value)
+        r.ltrim("last10", 0, 9)
         print("HERE!!!")
         print(key)
         print(value)
